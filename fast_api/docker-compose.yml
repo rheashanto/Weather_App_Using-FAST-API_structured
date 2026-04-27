@@ -1,0 +1,61 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      target: dev
+      dockerfile: ./Dockerfile
+    image: fast_api:${FAST_API_VERSION:-latest}
+    restart: always
+    ports:
+      # Exposes application port.
+    - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      FAST_API_HOST: 0.0.0.0
+      FAST_API_RELOAD: "True"
+      FAST_API_DB_HOST: fast_api-db
+      FAST_API_DB_PORT: 5432
+      FAST_API_DB_USER: fast_api
+      FAST_API_DB_PASS: fast_api
+      FAST_API_DB_BASE: fast_api
+    volumes:
+      - .:/app/src/
+
+  db:
+    image: postgres:18.3-trixie
+    hostname: fast_api-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "fast_api"
+      POSTGRES_USER: "fast_api"
+      POSTGRES_DB: "fast_api"
+    volumes:
+      - fast_api-db-data:/var/lib/postgresql
+    restart: always
+    healthcheck:
+      test: pg_isready -U fast_api
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    <<: *main_app
+    restart: "no"
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+
+volumes:
+  fast_api-db-data:
+    name: fast_api-db-data

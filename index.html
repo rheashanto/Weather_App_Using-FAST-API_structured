@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherVault</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3348;
+      --text: #e8eaf0;
+      --muted: #8892a4;
+      --accent: #4f8ef7;
+      --accent-dim: #1e3a6e;
+      --success: #3ecf8e;
+      --danger: #f87171;
+      --warn: #fbbf24;
+      --radius: 12px;
+      --font: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .nav-logo { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    #nav-user { font-size: 13px; color: var(--muted); }
+    #nav-logout {
+      font-size: 13px; background: none; border: 1px solid var(--border);
+      color: var(--muted); padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    }
+    #nav-logout:hover { color: var(--danger); border-color: var(--danger); }
+
+    /* PAGES */
+    .page { display: none; }
+    .page.active { display: flex; }
+
+    /* AUTH PAGE */
+    #page-auth {
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .auth-tabs { display: flex; margin-bottom: 28px; border-bottom: 1px solid var(--border); }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: all 0.2s;
+    }
+    .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .auth-form { display: flex; flex-direction: column; gap: 16px; }
+    .auth-form label { font-size: 13px; color: var(--muted); margin-bottom: 4px; display: block; }
+    .auth-form input {
+      width: 100%; padding: 10px 14px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+      font-family: var(--font); font-size: 14px; outline: none; transition: border 0.2s;
+    }
+    .auth-form input:focus { border-color: var(--accent); }
+    .btn-primary {
+      padding: 11px; background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; font-family: var(--font); font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .auth-error { font-size: 13px; color: var(--danger); padding: 10px 14px; background: rgba(248,113,113,0.1); border-radius: 8px; }
+
+    /* MAIN PAGE */
+    #page-main {
+      flex: 1;
+      flex-direction: column;
+      padding: 32px;
+      gap: 24px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* SEARCH */
+    .search-bar { display: flex; gap: 10px; }
+    .search-bar input {
+      flex: 1; padding: 12px 16px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-family: var(--font); font-size: 15px; outline: none;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .btn-search {
+      padding: 12px 24px; background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius); font-family: var(--font); font-size: 14px;
+      font-weight: 500; cursor: pointer;
+    }
+    .btn-search:hover { opacity: 0.88; }
+
+    /* WEATHER CARD */
+    .weather-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: none;
+    }
+    .weather-card.visible { display: block; }
+    .wc-top { display: flex; align-items: flex-start; justify-content: space-between; }
+    .wc-location { font-size: 22px; font-weight: 600; }
+    .wc-country { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .wc-temp { font-size: 52px; font-weight: 600; line-height: 1; font-family: var(--mono); }
+    .wc-desc { font-size: 15px; color: var(--muted); margin-top: 4px; text-transform: capitalize; }
+    .wc-details {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin-top: 24px;
+    }
+    .wc-detail {
+      background: var(--surface2); border-radius: 8px; padding: 14px;
+    }
+    .wc-detail-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .wc-detail-value { font-size: 18px; font-weight: 500; margin-top: 4px; }
+    .wc-actions { margin-top: 20px; display: flex; justify-content: flex-end; }
+    .btn-save {
+      padding: 9px 20px; background: var(--accent-dim); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 8px; font-family: var(--font);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .btn-save:hover { background: var(--accent); color: #fff; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* TABS */
+    .section-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+    .section-tab {
+      padding: 10px 16px; font-size: 14px; color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s;
+    }
+    .section-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+    /* SAVED LIST */
+    #saved-list { display: flex; flex-direction: column; gap: 10px; }
+    .saved-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .saved-item-left { display: flex; flex-direction: column; gap: 2px; }
+    .saved-city { font-size: 15px; font-weight: 500; }
+    .saved-meta { font-size: 12px; color: var(--muted); }
+    .saved-item-right { display: flex; align-items: center; gap: 16px; }
+    .saved-temp { font-size: 20px; font-weight: 600; font-family: var(--mono); }
+    .btn-delete {
+      background: none; border: 1px solid transparent; color: var(--muted);
+      cursor: pointer; font-size: 18px; border-radius: 6px; padding: 4px 8px;
+      line-height: 1;
+    }
+    .btn-delete:hover { color: var(--danger); border-color: var(--danger); background: rgba(248,113,113,0.1); }
+
+    .empty-state {
+      text-align: center; padding: 48px 0; color: var(--muted); font-size: 14px;
+    }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 20px; font-size: 13px;
+      opacity: 0; transform: translateY(8px); transition: all 0.25s;
+      pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">⛅ WeatherVault</div>
+  <div class="nav-right">
+    <span id="nav-user"></span>
+    <button id="nav-logout" style="display:none" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- AUTH PAGE -->
+<div id="page-auth" class="page">
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Log in</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Sign up</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form" class="auth-form">
+      <div>
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" />
+      </div>
+      <div>
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <div id="login-error" class="auth-error" style="display:none"></div>
+      <button class="btn-primary" onclick="doLogin()">Log in</button>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signup-form" class="auth-form" style="display:none">
+      <div>
+        <label>Username</label>
+        <input type="text" id="signup-username" placeholder="johndoe" />
+      </div>
+      <div>
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" />
+      </div>
+      <div>
+        <label>Password</label>
+        <input type="password" id="signup-password" placeholder="min. 8 characters" />
+      </div>
+      <div id="signup-error" class="auth-error" style="display:none"></div>
+      <button class="btn-primary" onclick="doSignup()">Create account</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div id="page-main" class="page">
+  <div class="search-bar">
+    <input type="text" id="city-input" placeholder="Search city (e.g. London, Tokyo, Mumbai...)"
+      onkeydown="if(event.key==='Enter') searchWeather()" />
+    <button class="btn-search" onclick="searchWeather()">Search</button>
+  </div>
+
+  <!-- WEATHER RESULT -->
+  <div class="weather-card" id="weather-card">
+    <div class="wc-top">
+      <div>
+        <div class="wc-location" id="wc-city">—</div>
+        <div class="wc-country" id="wc-country">—</div>
+        <div class="wc-desc" id="wc-desc">—</div>
+      </div>
+      <div>
+        <div class="wc-temp"><span id="wc-temp">—</span>°C</div>
+      </div>
+    </div>
+    <div class="wc-details">
+      <div class="wc-detail">
+        <div class="wc-detail-label">Feels like</div>
+        <div class="wc-detail-value"><span id="wc-feels">—</span>°C</div>
+      </div>
+      <div class="wc-detail">
+        <div class="wc-detail-label">Humidity</div>
+        <div class="wc-detail-value"><span id="wc-humidity">—</span>%</div>
+      </div>
+      <div class="wc-detail">
+        <div class="wc-detail-label">Wind speed</div>
+        <div class="wc-detail-value"><span id="wc-wind">—</span> m/s</div>
+      </div>
+    </div>
+    <div class="wc-actions">
+      <button class="btn-save" id="btn-save" onclick="saveWeather()">Save this weather</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="section-tabs">
+    <div class="section-tab active" onclick="switchTab('saved')">Saved weather</div>
+  </div>
+
+  <div id="saved-section">
+    <div id="saved-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://localhost:8000/api';
+  let token = localStorage.getItem('wv_token');
+  let username = localStorage.getItem('wv_username');
+  let currentWeather = null;
+
+  // INIT
+  if (token) showMain();
+  else showAuth();
+
+  function showAuth() {
+    document.getElementById('page-auth').classList.add('active');
+    document.getElementById('page-main').classList.remove('active');
+    document.getElementById('nav-logout').style.display = 'none';
+    document.getElementById('nav-user').textContent = '';
+  }
+
+  function showMain() {
+    document.getElementById('page-auth').classList.remove('active');
+    document.getElementById('page-main').classList.add('active');
+    document.getElementById('nav-logout').style.display = 'inline-block';
+    document.getElementById('nav-user').textContent = `Hi, ${username}`;
+    loadSaved();
+  }
+
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'signup'));
+    });
+    document.getElementById('login-form').style.display = tab === 'login' ? 'flex' : 'none';
+    document.getElementById('signup-form').style.display = tab === 'signup' ? 'flex' : 'none';
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Login failed');
+      storeAuth(data.access_token, data.username);
+      showMain();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function doSignup() {
+    const username = document.getElementById('signup-username').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const errEl = document.getElementById('signup-error');
+    errEl.style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Signup failed');
+      storeAuth(data.access_token, data.username);
+      showMain();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  function storeAuth(t, u) {
+    token = t; username = u;
+    localStorage.setItem('wv_token', t);
+    localStorage.setItem('wv_username', u);
+  }
+
+  function logout() {
+    token = null; username = null;
+    localStorage.removeItem('wv_token');
+    localStorage.removeItem('wv_username');
+    showAuth();
+  }
+
+  async function searchWeather() {
+    const city = document.getElementById('city-input').value.trim();
+    if (!city) return;
+
+    const card = document.getElementById('weather-card');
+    card.classList.remove('visible');
+
+    try {
+      const res = await fetch(`${API}/weather/current?city=${encodeURIComponent(city)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'City not found');
+
+      currentWeather = data;
+      document.getElementById('wc-city').textContent = data.city;
+      document.getElementById('wc-country').textContent = `${data.country}`;
+      document.getElementById('wc-desc').textContent = data.description;
+      document.getElementById('wc-temp').textContent = Math.round(data.temperature);
+      document.getElementById('wc-feels').textContent = Math.round(data.feels_like);
+      document.getElementById('wc-humidity').textContent = data.humidity;
+      document.getElementById('wc-wind').textContent = data.wind_speed;
+      document.getElementById('btn-save').disabled = false;
+      card.classList.add('visible');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function saveWeather() {
+    if (!currentWeather) return;
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const res = await fetch(`${API}/weather/save`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentWeather),
+      });
+      if (res.status === 401) { logout(); return; }
+      if (!res.ok) throw new Error('Failed to save');
+      showToast('Weather saved!', 'success');
+      loadSaved();
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save this weather';
+    }
+  }
+
+  async function loadSaved() {
+    const list = document.getElementById('saved-list');
+    list.innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
+
+    try {
+      const res = await fetch(`${API}/weather/saved`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      const data = await res.json();
+
+      if (!data.length) {
+        list.innerHTML = '<div class="empty-state">No saved weather yet. Search a city and hit Save.</div>';
+        return;
+      }
+
+      list.innerHTML = data.map(e => `
+        <div class="saved-item" id="entry-${e.id}">
+          <div class="saved-item-left">
+            <div class="saved-city">${e.city}, ${e.country}</div>
+            <div class="saved-meta">${e.description} · ${new Date(e.saved_at).toLocaleString()}</div>
+          </div>
+          <div class="saved-item-right">
+            <div class="saved-temp">${Math.round(e.temperature)}°C</div>
+            <button class="btn-delete" onclick="deleteEntry('${e.id}')" title="Delete">×</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div class="empty-state">Failed to load saved weather.</div>';
+    }
+  }
+
+  async function deleteEntry(id) {
+    try {
+      const res = await fetch(`${API}/weather/saved/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      if (!res.ok) throw new Error('Failed to delete');
+      document.getElementById(`entry-${id}`)?.remove();
+      const list = document.getElementById('saved-list');
+      if (!list.children.length) {
+        list.innerHTML = '<div class="empty-state">No saved weather yet. Search a city and hit Save.</div>';
+      }
+      showToast('Deleted', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>
